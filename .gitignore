@@ -1,0 +1,19 @@
+# File links (contengono URL — non committare)
+links/*.txt
+
+# Log di download
+logs/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# SSD esterno — mai committare video
+*.mp4
+*.mov
+*.avi
