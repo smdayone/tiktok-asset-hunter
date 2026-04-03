@@ -55,6 +55,9 @@ METADATA_PRINT = "%(uploader_id)s|%(view_count)s|%(like_count)s|%(comment_count)
 # Command to invoke yt-dlp — set by check_ytdlp() at startup
 YDL_CMD: list[str] = []
 
+# Cookie args — set by main() based on --browser argument
+COOKIE_ARGS: list[str] = []
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -131,6 +134,7 @@ def fetch_metadata(url: str) -> dict:
         "--quiet",
         "--no-check-certificates",
         "--skip-download",
+        *COOKIE_ARGS,
         "--print", METADATA_PRINT,
         url
     ]
@@ -157,6 +161,7 @@ def download_video(url: str, output_dir: str) -> dict:
     cmd = [
         *YDL_CMD,
         *YDL_BASE_ARGS,
+        *COOKIE_ARGS,
         "--output", str(Path(output_dir) / OUTPUT_TEMPLATE),
         url
     ]
@@ -218,10 +223,19 @@ def main():
         "--delay", type=float, default=2.0,
         help="Pause in seconds between downloads (default: 2)"
     )
+    parser.add_argument(
+        "--browser", default="chrome",
+        choices=["chrome", "edge", "firefox", "brave", "opera", "chromium", "safari"],
+        help="Browser to extract TikTok cookies from (default: chrome)"
+    )
     args = parser.parse_args()
 
     # ── Setup ──────────────────────────────────────────────────────────────────
+    global COOKIE_ARGS
+    COOKIE_ARGS = ["--cookies-from-browser", args.browser]
+
     check_ytdlp()
+    print(f"[i] Using cookies from: {args.browser}")
 
     output_dir = Path(args.out)
     output_dir.mkdir(parents=True, exist_ok=True)

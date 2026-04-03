@@ -60,6 +60,16 @@ if ([string]::IsNullOrWhiteSpace($maxInput)) {
     $maxVideos = [int]$maxInput
 }
 
+# ── 4b. Browser for cookies ───────────────────────────────────────────────────
+$defaultBrowser = "chrome"
+$browserInput   = Read-Host "  Browser for TikTok cookies [chrome/edge/firefox, default: $defaultBrowser]"
+
+if ([string]::IsNullOrWhiteSpace($browserInput)) {
+    $browser = $defaultBrowser
+} else {
+    $browser = $browserInput.ToLower().Trim()
+}
+
 # ── 5. Build output path ──────────────────────────────────────────────────────
 $safeName   = $keyword -replace '[\\/:*?<>|]', '_'
 $outputPath = "$OUTPUT_BASE\$safeName"
@@ -69,6 +79,7 @@ Write-Host "  --------------------------------------------" -ForegroundColor Dar
 Write-Host "  Keyword    : $keyword"
 Write-Host "  Links file : $linksFile"
 Write-Host "  Max videos : $maxVideos"
+Write-Host "  Browser    : $browser"
 Write-Host "  Output     : $outputPath" -ForegroundColor Cyan
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
@@ -84,7 +95,7 @@ if ($confirm -match '^[Nn]') {
 Write-Host ""
 Write-Host "  [>>] Running tiktok_batch_download.py..." -ForegroundColor Cyan
 
-python scripts\tiktok_batch_download.py --links $linksFile --out $outputPath --max $maxVideos
+python scripts\tiktok_batch_download.py --links $linksFile --out $outputPath --max $maxVideos --browser $browser
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [X] Download script exited with error code $LASTEXITCODE." -ForegroundColor Red
