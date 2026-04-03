@@ -21,6 +21,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Windows cp1252 fix: force UTF-8 output so unicode chars print correctly
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
