@@ -228,14 +228,26 @@ def main():
         choices=["chrome", "edge", "firefox", "brave", "opera", "chromium", "safari"],
         help="Browser to extract TikTok cookies from (default: chrome)"
     )
+    parser.add_argument(
+        "--cookies-file", default=None,
+        help="Path to a cookies.txt file (alternative to --browser, works with Chrome open)"
+    )
     args = parser.parse_args()
 
     # ── Setup ──────────────────────────────────────────────────────────────────
     global COOKIE_ARGS
-    COOKIE_ARGS = ["--cookies-from-browser", args.browser]
+    if args.cookies_file:
+        cookies_path = Path(args.cookies_file)
+        if not cookies_path.exists():
+            print(f"[✗] Cookies file not found: {args.cookies_file}")
+            sys.exit(1)
+        COOKIE_ARGS = ["--cookies", str(cookies_path)]
+        print(f"[i] Using cookies file: {cookies_path}")
+    else:
+        COOKIE_ARGS = ["--cookies-from-browser", args.browser]
+        print(f"[i] Using cookies from browser: {args.browser}")
 
     check_ytdlp()
-    print(f"[i] Using cookies from: {args.browser}")
 
     output_dir = Path(args.out)
     output_dir.mkdir(parents=True, exist_ok=True)

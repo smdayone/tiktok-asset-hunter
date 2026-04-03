@@ -60,14 +60,34 @@ if ([string]::IsNullOrWhiteSpace($maxInput)) {
     $maxVideos = [int]$maxInput
 }
 
-# ── 4b. Browser for cookies ───────────────────────────────────────────────────
-$defaultBrowser = "chrome"
-$browserInput   = Read-Host "  Browser for TikTok cookies [chrome/edge/firefox, default: $defaultBrowser]"
+# ── 4b. Cookie method ────────────────────────────────────────────────────────
+$defaultCookiesFile = "links\cookies.txt"
+Write-Host "  Cookie method:"
+Write-Host "    [1] Browser (requires browser closed)  <- default"
+Write-Host "    [2] cookies.txt file (works with browser open)"
+$cookieMethod = Read-Host "  Choose [1/2, default: 1]"
 
-if ([string]::IsNullOrWhiteSpace($browserInput)) {
-    $browser = $defaultBrowser
+if ($cookieMethod -eq "2") {
+    $cookiesFileInput = Read-Host "  Path to cookies.txt [default: $defaultCookiesFile]"
+    if ([string]::IsNullOrWhiteSpace($cookiesFileInput)) {
+        $cookiesFile = $defaultCookiesFile
+    } else {
+        $cookiesFile = $cookiesFileInput
+    }
+    $cookieArg  = "--cookies-file"
+    $cookieVal  = $cookiesFile
+    $cookieDesc = "cookies.txt: $cookiesFile"
 } else {
-    $browser = $browserInput.ToLower().Trim()
+    $defaultBrowser = "chrome"
+    $browserInput   = Read-Host "  Browser [chrome/edge/firefox, default: $defaultBrowser]"
+    if ([string]::IsNullOrWhiteSpace($browserInput)) {
+        $browser = $defaultBrowser
+    } else {
+        $browser = $browserInput.ToLower().Trim()
+    }
+    $cookieArg  = "--browser"
+    $cookieVal  = $browser
+    $cookieDesc = "browser: $browser"
 }
 
 # ── 5. Build output path ──────────────────────────────────────────────────────
@@ -79,7 +99,7 @@ Write-Host "  --------------------------------------------" -ForegroundColor Dar
 Write-Host "  Keyword    : $keyword"
 Write-Host "  Links file : $linksFile"
 Write-Host "  Max videos : $maxVideos"
-Write-Host "  Browser    : $browser"
+Write-Host "  Cookies    : $cookieDesc"
 Write-Host "  Output     : $outputPath" -ForegroundColor Cyan
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
@@ -95,7 +115,7 @@ if ($confirm -match '^[Nn]') {
 Write-Host ""
 Write-Host "  [>>] Running tiktok_batch_download.py..." -ForegroundColor Cyan
 
-python scripts\tiktok_batch_download.py --links $linksFile --out $outputPath --max $maxVideos --browser $browser
+python scripts\tiktok_batch_download.py --links $linksFile --out $outputPath --max $maxVideos $cookieArg $cookieVal
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [X] Download script exited with error code $LASTEXITCODE." -ForegroundColor Red
