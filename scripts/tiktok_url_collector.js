@@ -1,24 +1,24 @@
 /**
  * TIKTOK URL COLLECTOR
  * ─────────────────────────────────────────────────────────────────
- * Come usarlo:
+ * How to use it:
  *
- * 1. Vai su tiktok.com e cerca la tua keyword (es. "wireless earbuds")
- * 2. Apri DevTools → Console (F12 o Cmd+Option+I)
- * 3. Incolla questo script e premi Invio
- * 4. Scorri manualmente la pagina — lo script raccoglie i link in background
- * 5. Quando hai finito di scorrere, digita nella console:
+ * 1. Go to tiktok.com and search for your keyword (e.g. "wireless earbuds")
+ * 2. Open DevTools → Console (F12 or Cmd+Option+I)
+ * 3. Paste this script and press Enter
+ * 4. Scroll the page manually — the script collects links in the background
+ * 5. When you are done scrolling, type in the console:
  *        downloadLinks()
- *    e premi Invio → verrà scaricato il file TikTokLinks.txt
- * 6. Usa quel file con tiktok_batch_download.py
+ *    and press Enter → TikTokLinks.txt will be downloaded
+ * 6. Use that file with tiktok_batch_download.py
  *
- * Opzionale: per scaricare un file parziale mentre scorri ancora:
+ * Optional: to download a partial file while still scrolling:
  *        downloadLinks(true)
  * ─────────────────────────────────────────────────────────────────
  */
 
 (function () {
-  // Stato interno
+  // Internal state
   window._ttCollector = window._ttCollector || {
     links: new Set(),
     interval: null,
@@ -27,15 +27,15 @@
 
   const state = window._ttCollector;
 
-  // Stoppa eventuale collector precedente
+  // Stop any previous collector
   if (state.interval) {
     clearInterval(state.interval);
   }
 
-  // ── Selettori TikTok (aggiornati a Q1 2026) ──────────────────────
+  // ── TikTok selectors (updated Q1 2026) ───────────────────────────
   const VIDEO_SELECTORS = [
-    'a[href*="/video/"]',           // link video standard
-    'a[href*="/@"][href*="/video"]', // link con username
+    'a[href*="/video/"]',           // standard video link
+    'a[href*="/@"][href*="/video"]', // link with username
   ];
 
   function collectLinks() {
@@ -51,37 +51,37 @@
     });
     if (found > 0) {
       state.count += found;
-      console.log(`[TT Collector] +${found} nuovi link | Totale: ${state.links.size}`);
+      console.log(`[TT Collector] +${found} new links | Total: ${state.links.size}`);
     }
   }
 
-  // Raccolta ogni 800ms mentre scorri
+  // Collect every 800ms while scrolling
   state.interval = setInterval(collectLinks, 800);
 
-  // Prima raccolta immediata
+  // First immediate collection
   collectLinks();
 
   console.log(
-    "%c[TT Collector] Avviato ✓",
-    "color: #0A84FF; font-weight: bold; font-size: 14px"
+    "%c[TT Collector] Started ✓",
+    "color: #DA7756; font-weight: bold; font-size: 14px"
   );
   console.log(
-    "%cSCORRI la pagina. Quando hai finito digita: downloadLinks()",
+    "%cSCROLL the page. When done, type: downloadLinks()",
     "color: #888; font-size: 12px"
   );
 
   // ── Download file ─────────────────────────────────────────────────
   window.downloadLinks = function (partial = false) {
     if (state.links.size === 0) {
-      console.warn("[TT Collector] Nessun link trovato. Hai già scorso la pagina?");
+      console.warn("[TT Collector] No links found. Have you scrolled the page yet?");
       return;
     }
 
-    // Ferma la raccolta (solo se non è parziale)
+    // Stop collection (only if not partial)
     if (!partial && state.interval) {
       clearInterval(state.interval);
       state.interval = null;
-      console.log("[TT Collector] Raccolta fermata.");
+      console.log("[TT Collector] Collection stopped.");
     }
 
     const lines = [...state.links].join("\n");
@@ -96,16 +96,16 @@
     URL.revokeObjectURL(url);
 
     console.log(
-      `%c[TT Collector] Scaricato: ${state.links.size} link → ${a.download}`,
+      `%c[TT Collector] Downloaded: ${state.links.size} links → ${a.download}`,
       "color: #30d158; font-weight: bold;"
     );
   };
 
-  // Funzione di reset
+  // Reset function
   window.resetCollector = function () {
     if (state.interval) clearInterval(state.interval);
     state.links.clear();
     state.count = 0;
-    console.log("[TT Collector] Reset. Riavvia con lo script.");
+    console.log("[TT Collector] Reset. Re-run the script to restart.");
   };
 })();
