@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────
  * How to use it:
  *
- * 1. Go to tiktok.com/search/video?q=YOUR+KEYWORD (video tab)
+ * 1. Go to: tiktok.com/search/video?q=YOUR+KEYWORD  (video tab)
  * 2. Open DevTools → Console (F12 or Cmd+Option+I)
  * 3. Paste this script and press Enter
  * 4. Scroll the page manually — the script collects links in the background
@@ -15,7 +15,7 @@
  * Optional: to download a partial file while still scrolling:
  *        downloadLinks(true)
  *
- * Optional: to see how many links are collected so far:
+ * Optional: to check collection status at any time:
  *        showStatus()
  * ─────────────────────────────────────────────────────────────────
  */
@@ -25,79 +25,52 @@
   window._ttCollector = window._ttCollector || {
     links: new Set(),
     interval: null,
-    count: 0,
-    mode: "unknown",
   };
 
   const state = window._ttCollector;
 
-  // Stop any previous collector
+  // Stop any previous collector instance
   if (state.interval) {
     clearInterval(state.interval);
   }
 
-  // ── Container detection (scoped collection) ───────────────────────
-  // Try to find the search results feed container first.
-  // This prevents collecting sidebar / recommended / unrelated videos.
-  const CONTAINER_SELECTORS = [
-    // TikTok search results feed (video tab)
-    '[data-e2e="search_top-item-list"]',
-    '[data-e2e="search-item-list"]',
-    '[data-e2e="search_video-item-list"]',
-    // Generic main feed wrappers
-    '[class*="DivVideoFeed"]',
-    '[class*="search-card-container"]',
-    // Last resort: main content area
-    'main',
-    '#main-content',
-  ];
-
-  function findContainer() {
-    for (const sel of CONTAINER_SELECTORS) {
-      const el = document.querySelector(sel);
-      if (el) return el;
-    }
-    return document; // fallback: full page
-  }
-
-  // ── TikTok video link selectors ───────────────────────────────────
-  const VIDEO_SELECTORS = [
-    'a[href*="/video/"]',
-    'a[href*="/@"][href*="/video"]',
-  ];
-
+  // ── Core collection logic ─────────────────────────────────────────
+  //
+  // Strategy: query ONLY [data-e2e="search_top-item"] elements.
+  // Each one is a single search-result video card. We take the first
+  // /video/ link inside it. This filters out:
+  //   - "Following" feed videos shown above the results
+  //   - Sidebar / recommended content
+  //   - Hashtag links and user profile links
+  //
   function collectLinks() {
-    const container = findContainer();
-    const isScoped  = container !== document;
-
-    if (state.mode !== (isScoped ? "scoped" : "full")) {
-      state.mode = isScoped ? "scoped" : "full";
-      const label = isScoped
-        ? `[TT Collector] Scoped to: ${container.tagName}[data-e2e="${container.dataset.e2e || ''}"]`
-        : "[TT Collector] WARNING: no search container found — collecting full page";
-      console.log(`%c${label}`, "color: #DA7756; font-size: 11px");
-    }
-
+    const cards = document.querySelectorAll('[data-e2e="search_top-item"]');
     let found = 0;
-    VIDEO_SELECTORS.forEach((sel) => {
-      container.querySelectorAll(sel).forEach((el) => {
-        const href = el.href;
-        // Extra guard: skip profile links that happen to contain /video/
-        if (
-          href &&
-          href.includes("/video/") &&
-          !href.includes("/video/#") &&
-          !state.links.has(href)
-        ) {
-          state.links.add(href);
-          found++;
-        }
-      });
+
+    cards.forEach((card) => {
+      // First anchor with a /video/ path inside this search-result card
+      const anchor = card.querySelector('a[href*="/video/"]');
+      if (!anchor) return;
+
+      const href = anchor.href.split("?")[0]; // strip query params
+      if (href && !state.links.has(href)) {
+        state.links.add(href);
+        found++;
+      }
     });
 
     if (found > 0) {
-      state.count += found;
-      console.log(`[TT Collector] +${found} new links | Total: ${state.links.size}`);
+      console.log(
+        `[TT Collector] +${found} new links | Total: ${state.links.size}`
+      );
+    }
+
+    // Warn if no search_top-item cards found at all
+    if (cards.length === 0 && state.links.size === 0) {
+      console.warn(
+        "[TT Collector] No search result cards found. " +
+        "Make sure you are on: tiktok.com/search/video?q=YOUR+KEYWORD"
+      );
     }
   }
 
@@ -108,57 +81,55 @@
   collectLinks();
 
   console.log(
-    "%c[TT Collector] Started ✓",
+    "%c[TT Collector] Started - search results only",
     "color: #DA7756; font-weight: bold; font-size: 14px"
   );
   console.log(
-    "%cTip: make sure you are on tiktok.com/search/video?q=YOUR+KEYWORD",
-    "color: #e09060; font-size: 12px"
-  );
-  console.log(
-    "%cSCROLL the page. When done, type: downloadLinks()",
+    "%cSCROLL the page. When done type: downloadLinks()",
     "color: #888; font-size: 12px"
   );
 
-  // ── Status ────────────────────────────────────────────────────────
+  // ── Status helper ─────────────────────────────────────────────────
   window.showStatus = function () {
-    const container = findContainer();
-    const isScoped  = container !== document;
+    const cards = document.querySelectorAll('[data-e2e="search_top-item"]');
     console.log(
-      `%c[TT Collector] ${state.links.size} links collected | mode: ${isScoped ? "scoped ✓" : "full page ⚠"}`,
+      `%c[TT Collector] ${state.links.size} links collected | ${cards.length} cards visible`,
       "color: #DA7756; font-weight: bold"
     );
-    console.log([...state.links].slice(0, 3).join("\n"));
+    if (state.links.size > 0) {
+      console.log("Sample URLs:");
+      [...state.links].slice(0, 3).forEach((u) => console.log(" ", u));
+    }
   };
 
   // ── Download file ─────────────────────────────────────────────────
   window.downloadLinks = function (partial = false) {
     if (state.links.size === 0) {
-      console.warn("[TT Collector] No links found. Have you scrolled the page yet?");
+      console.warn(
+        "[TT Collector] No links found yet. Have you scrolled the page?"
+      );
       return;
     }
 
-    // Stop collection (only if not partial)
     if (!partial && state.interval) {
       clearInterval(state.interval);
       state.interval = null;
       console.log("[TT Collector] Collection stopped.");
     }
 
-    const lines = [...state.links].join("\n");
-    const blob  = new Blob([lines], { type: "text/plain" });
-    const url   = URL.createObjectURL(blob);
-    const a     = document.createElement("a");
-    a.href      = url;
-    a.download  = partial ? "TikTokLinks_partial.txt" : "TikTokLinks.txt";
+    const blob = new Blob([[...state.links].join("\n"), { type: "text/plain" }]);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = partial ? "TikTokLinks_partial.txt" : "TikTokLinks.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
     console.log(
-      `%c[TT Collector] Downloaded: ${state.links.size} links → ${a.download}`,
-      "color: #30d158; font-weight: bold;"
+      `%c[TT Collector] Saved: ${state.links.size} links → ${a.download}`,
+      "color: #30d158; font-weight: bold"
     );
   };
 
@@ -166,8 +137,6 @@
   window.resetCollector = function () {
     if (state.interval) clearInterval(state.interval);
     state.links.clear();
-    state.count = 0;
-    state.mode  = "unknown";
     console.log("[TT Collector] Reset. Re-run the script to restart.");
   };
 })();
