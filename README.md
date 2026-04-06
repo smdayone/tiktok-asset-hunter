@@ -15,14 +15,14 @@ Tool for collecting and downloading competitor videos from TikTok for dropshippi
 ```powershell
 python scripts\tiktok_batch_download.py `
   --links links\TikTokLinks.txt `
-  --out "D:\Products Reels\wireless_earbuds" `
+  --out "D:\Products Reels\wireless_earbuds\raw" `
   --max 30
 ```
 
 ### Step 3 — Generate engagement report (optional)
 ```powershell
 python scripts\generate_report.py `
-  --log "D:\Products Reels\wireless_earbuds\download_log.csv" `
+  --log "D:\Products Reels\wireless_earbuds\raw\download_log.csv" `
   --out "D:\Products Reels\wireless_earbuds\report.html" `
   --keyword "wireless earbuds"
 ```
@@ -36,11 +36,17 @@ python scripts\generate_report.py `
 ```
 D:\Products Reels\
 ├── wireless_earbuds\
-│   ├── @username__title__id.mp4
-│   ├── download_log.csv
-│   └── report.html
+│   ├── raw\                        ← downloaded videos + log
+│   │   ├── @username__title__id.mp4
+│   │   ├── @username__title__id.mp4
+│   │   └── download_log.csv
+│   └── report.html                 ← engagement report
 ├── smart_watch\
+│   ├── raw\
+│   └── report.html
 └── ring_light\
+    ├── raw\
+    └── report.html
 ```
 
 ## Requirements

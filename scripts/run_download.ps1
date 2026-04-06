@@ -91,8 +91,9 @@ if ($cookieMethod -eq "2") {
 }
 
 # ── 5. Build output path ──────────────────────────────────────────────────────
-$safeName   = $keyword -replace '[\\/:*?<>|]', '_'
-$outputPath = "$OUTPUT_BASE\$safeName"
+$safeName    = $keyword -replace '[\\/:*?<>|]', '_'
+$keywordPath = "$OUTPUT_BASE\$safeName"
+$outputPath  = "$keywordPath\raw"
 
 Write-Host ""
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
@@ -100,7 +101,8 @@ Write-Host "  Keyword    : $keyword"
 Write-Host "  Links file : $linksFile"
 Write-Host "  Max videos : $maxVideos"
 Write-Host "  Cookies    : $cookieDesc"
-Write-Host "  Output     : $outputPath" -ForegroundColor Cyan
+Write-Host "  Videos     : $outputPath" -ForegroundColor Cyan
+Write-Host "  Report     : $keywordPath\report.html" -ForegroundColor Cyan
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -126,7 +128,7 @@ Write-Host "  [OK] Download complete." -ForegroundColor Green
 
 # ── 8. Optional: engagement report ───────────────────────────────────────────
 $logPath    = "$outputPath\download_log.csv"
-$reportPath = "$outputPath\report.html"
+$reportPath = "$keywordPath\report.html"
 
 if (Test-Path $logPath) {
     Write-Host ""
