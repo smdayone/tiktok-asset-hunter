@@ -38,7 +38,7 @@ if (-not (Test-Path $QUEUE_DIR)) {
     New-Item -ItemType Directory -Path $QUEUE_DIR -Force | Out-Null
 }
 
-$linkFiles = @(Get-ChildItem -Path $QUEUE_DIR -Include "*.csv","*.txt" -File -ErrorAction SilentlyContinue)
+$linkFiles = @(Get-ChildItem -Path "$QUEUE_DIR\*" -Include "*.csv","*.txt" -File -ErrorAction SilentlyContinue)
 
 if ($linkFiles.Count -eq 0) {
     Write-Host "  [X] No .csv or .txt files found in $QUEUE_DIR" -ForegroundColor Red
