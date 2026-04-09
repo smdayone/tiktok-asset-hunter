@@ -103,20 +103,54 @@ def check_ytdlp():
     sys.exit(1)
 
 
-def load_urls(links_file: str, max_videos: int | None) -> list[str]:
-    """Load and deduplicate URLs from the .txt file."""
-    path = Path(links_file)
-    if not path.exists():
-        print(f"[✗] File not found: {links_file}")
-        sys.exit(1)
+def _is_valid_url(u: str) -> bool:
+    return bool(u and "tiktok.com" in u and "/video/" in u)
 
+
+def _read_txt(path: Path) -> list[str]:
     lines = path.read_text(encoding="utf-8").strip().splitlines()
-    urls = list(dict.fromkeys(           # deduplicate while preserving order
-        l.strip() for l in lines
-        if l.strip() and "tiktok.com" in l and "/video/" in l
-    ))
+    return [l.strip() for l in lines if _is_valid_url(l.strip())]
 
-    print(f"[i] Unique URLs found: {len(urls)}")
+
+def _read_csv(path: Path) -> list[str]:
+    """Read URLs from a CSV file. Expects a 'url' column; falls back to first column."""
+    urls = []
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames and "url" in reader.fieldnames:
+            for row in reader:
+                u = row.get("url", "").strip()
+                if _is_valid_url(u):
+                    urls.append(u)
+        else:
+            # Fallback: treat every non-header line as a potential URL
+            f.seek(0)
+            next(f, None)  # skip header row
+            for line in f:
+                u = line.strip()
+                if _is_valid_url(u):
+                    urls.append(u)
+    return urls
+
+
+def load_urls(links_files: list[str], max_videos: int | None) -> list[str]:
+    """Load and deduplicate URLs from one or more .txt or .csv files."""
+    all_urls: list[str] = []
+
+    for links_file in links_files:
+        path = Path(links_file)
+        if not path.exists():
+            print(f"[!] File not found, skipping: {links_file}")
+            continue
+        if path.suffix.lower() == ".csv":
+            file_urls = _read_csv(path)
+        else:
+            file_urls = _read_txt(path)
+        print(f"[i] {path.name}: {len(file_urls)} valid URLs")
+        all_urls.extend(file_urls)
+
+    urls = list(dict.fromkeys(all_urls))  # deduplicate cross-file, preserve order
+    print(f"[i] Total unique URLs: {len(urls)}")
 
     if max_videos and len(urls) > max_videos:
         urls = urls[:max_videos]
@@ -208,8 +242,8 @@ def main():
         description="Download TikTok videos from a URL file."
     )
     parser.add_argument(
-        "--links", required=True,
-        help="Path to the TikTokLinks.txt file"
+        "--links", required=True, nargs="+",
+        help="One or more .txt or .csv files containing TikTok URLs"
     )
     parser.add_argument(
         "--out", required=True,
@@ -253,7 +287,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"[i] Output: {output_dir}")
 
-    urls = load_urls(args.links, args.max)
+    urls = load_urls(args.links, args.max)  # args.links is now a list
 
     if not urls:
         print("[!] No valid URLs found in the file.")

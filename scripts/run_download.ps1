@@ -3,16 +3,21 @@
 .SYNOPSIS
     Interactive launcher for tiktok-asset-hunter.
 .DESCRIPTION
-    Checks D:\ drive, prompts for parameters, runs the downloader,
+    Reads all .csv/.txt files from links\queue\, runs the downloader,
     and optionally generates an HTML engagement report.
 .NOTES
     Run from the project root: .\scripts\run_download.ps1
+    Workflow:
+      1. Export TikTokLinks.csv from the browser collector
+      2. Copy it to links\queue\
+      3. Run this script
 #>
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $OUTPUT_BASE = "D:\Products Reels"
+$QUEUE_DIR   = "links\queue"
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor DarkYellow
@@ -28,39 +33,33 @@ if (-not (Test-Path "D:\")) {
 Write-Host "  [OK] Drive D:\ detected." -ForegroundColor Green
 Write-Host ""
 
-# ── 2. Keyword ────────────────────────────────────────────────────────────────
+# ── 2. Read links from queue folder ──────────────────────────────────────────
+if (-not (Test-Path $QUEUE_DIR)) {
+    New-Item -ItemType Directory -Path $QUEUE_DIR -Force | Out-Null
+}
+
+$linkFiles = @(Get-ChildItem -Path $QUEUE_DIR -Include "*.csv","*.txt" -File -ErrorAction SilentlyContinue)
+
+if ($linkFiles.Count -eq 0) {
+    Write-Host "  [X] No .csv or .txt files found in $QUEUE_DIR" -ForegroundColor Red
+    Write-Host "      Export TikTokLinks.csv from the browser collector and copy it there." -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "  [OK] Files found in $QUEUE_DIR :" -ForegroundColor Green
+foreach ($f in $linkFiles) {
+    Write-Host "       - $($f.Name)"
+}
+Write-Host ""
+
+# ── 3. Keyword ────────────────────────────────────────────────────────────────
 $keyword = Read-Host "  Keyword (e.g. wireless earbuds)"
 if ([string]::IsNullOrWhiteSpace($keyword)) {
     Write-Host "  [X] Keyword cannot be empty." -ForegroundColor Red
     exit 1
 }
 
-# ── 3. Links file ─────────────────────────────────────────────────────────────
-$defaultLinks = "links\TikTokLinks.txt"
-$linksInput   = Read-Host "  Links file path [default: $defaultLinks]"
-
-if ([string]::IsNullOrWhiteSpace($linksInput)) {
-    $linksFile = $defaultLinks
-} else {
-    $linksFile = $linksInput
-}
-
-if (-not (Test-Path $linksFile)) {
-    Write-Host "  [X] Links file not found: $linksFile" -ForegroundColor Red
-    exit 1
-}
-
-# ── 4. Max videos ─────────────────────────────────────────────────────────────
-$defaultMax = 30
-$maxInput   = Read-Host "  Max videos [default: $defaultMax]"
-
-if ([string]::IsNullOrWhiteSpace($maxInput)) {
-    $maxVideos = $defaultMax
-} else {
-    $maxVideos = [int]$maxInput
-}
-
-# ── 4b. Cookie method ────────────────────────────────────────────────────────
+# ── 4. Cookie method ─────────────────────────────────────────────────────────
 $defaultCookiesFile = "links\cookies.txt"
 Write-Host "  Cookie method:"
 Write-Host "    [1] Browser (requires browser closed)  <- default"
@@ -98,8 +97,7 @@ $outputPath  = "$keywordPath\raw"
 Write-Host ""
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host "  Keyword    : $keyword"
-Write-Host "  Links file : $linksFile"
-Write-Host "  Max videos : $maxVideos"
+Write-Host "  Files      : $($linkFiles.Count) file(s) from $QUEUE_DIR"
 Write-Host "  Cookies    : $cookieDesc"
 Write-Host "  Videos     : $outputPath" -ForegroundColor Cyan
 Write-Host "  Report     : $keywordPath\report.html" -ForegroundColor Cyan
@@ -117,7 +115,9 @@ if ($confirm -match '^[Nn]') {
 Write-Host ""
 Write-Host "  [>>] Running tiktok_batch_download.py..." -ForegroundColor Cyan
 
-python scripts\tiktok_batch_download.py --links $linksFile --out $outputPath --max $maxVideos $cookieArg $cookieVal
+$linkPaths = $linkFiles.FullName
+
+& python scripts\tiktok_batch_download.py --links $linkPaths --out $outputPath $cookieArg $cookieVal
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [X] Download script exited with error code $LASTEXITCODE." -ForegroundColor Red
@@ -136,7 +136,7 @@ if (Test-Path $logPath) {
     if ($genReport -notmatch '^[Nn]') {
         Write-Host "  [>>] Generating report..." -ForegroundColor Cyan
 
-        python scripts\generate_report.py --log $logPath --out $reportPath --keyword $keyword
+        & python scripts\generate_report.py --log $logPath --out $reportPath --keyword $keyword
 
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  [OK] Report saved: $reportPath" -ForegroundColor Green

@@ -1,5 +1,7 @@
 # File links (contengono URL — non committare)
 links/*.txt
+links/queue/*.txt
+links/queue/*.csv
 
 # Log di download
 logs/*.csv
