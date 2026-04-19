@@ -1,15 +1,19 @@
 /**
- * TIKTOK URL COLLECTOR — Checkbox Edition
+ * ASSET COLLECTOR — Multi-platform Checkbox Edition
  * ─────────────────────────────────────────────────────────────────
- * How to use it:
+ * Supported pages:
+ *   • tiktok.com/search/video?q=KEYWORD  (TikTok search results)
+ *   • tiktok.com/@username               (TikTok profile grid)
+ *   • instagram.com/username             (Instagram profile grid)
  *
- * 1. Go to: tiktok.com/search/video?q=YOUR+KEYWORD  (Video tab)
+ * How to use it:
+ * 1. Navigate to one of the supported pages
  * 2. Open DevTools → Console (F12)
  * 3. Paste this script and press Enter
- * 4. Scroll the page — video cards appear in the side panel
+ * 4. Scroll the page — cards appear in the side panel
  * 5. Check the videos you want to download
  * 6. Click "CSV" in the panel (or type downloadLinks() in console)
- * 7. Copy TikTokLinks.csv to links/queue/ and run run_download.ps1
+ * 7. Copy the exported CSV to links/queue/ and run run_download.ps1
  *
  * Console helpers:
  *   showStatus()     — log collection stats
@@ -18,6 +22,52 @@
  */
 
 (function () {
+
+  // ── Page detection ────────────────────────────────────────────────
+  function detectPage() {
+    const h = location.hostname;
+    const p = location.pathname;
+
+    if (h.includes("tiktok.com")) {
+      if (p.startsWith("/search")) {
+        const q = new URLSearchParams(location.search).get("q") || "search";
+        return {
+          platform: "tiktok", pageType: "search", identifier: q,
+          label: "TikTok Search", collector: collectTikTokSearch,
+        };
+      }
+      const m = p.match(/^\/@([^/?]+)/);
+      if (m) return {
+        platform: "tiktok", pageType: "profile", identifier: m[1],
+        label: `TikTok @${m[1]}`, collector: collectTikTokProfile,
+      };
+    }
+
+    if (h.includes("instagram.com")) {
+      const m = p.match(/^\/([^/?]+)\/?$/);
+      if (m && m[1] !== "explore" && m[1] !== "reels") {
+        return {
+          platform: "ig", pageType: "profile", identifier: m[1],
+          label: `IG @${m[1]}`, collector: collectInstagramProfile,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  const PAGE = detectPage();
+
+  if (!PAGE) {
+    console.warn(
+      "[Collector] Pagina non supportata.\n" +
+      "Vai su:\n" +
+      "  • tiktok.com/search/video?q=KEYWORD\n" +
+      "  • tiktok.com/@username\n" +
+      "  • instagram.com/username"
+    );
+    return;
+  }
 
   // ── State ─────────────────────────────────────────────────────────
   // all: Map<url, { username, videoId, thumb, checked, cardChk, panelChk }>
@@ -98,7 +148,7 @@
     p.id = "tt-panel";
     p.innerHTML = `
       <div id="tt-header">
-        <span>TT Collector</span>
+        <span>${PAGE.label}</span>
         <span id="tt-count">0 sel / 0</span>
       </div>
       <div id="tt-actions">
@@ -167,7 +217,7 @@
     list.appendChild(item);
   }
 
-  // ── Inject checkbox on card ───────────────────────────────────────
+  // ── Inject checkbox on a wrapper card (TikTok) ────────────────────
   function injectCardCheckbox(card, url) {
     if (card.querySelector(".tt-card-lbl")) return null;
     card.style.position = "relative";
@@ -184,6 +234,27 @@
 
     lbl.appendChild(chk);
     card.appendChild(lbl);
+    return chk;
+  }
+
+  // ── Inject checkbox on an anchor card (Instagram) ─────────────────
+  // Instagram's <a> IS the card — we must prevent navigation on click.
+  function injectCardCheckboxOnAnchor(anchor, url) {
+    if (anchor.querySelector(".tt-card-lbl")) return null;
+    anchor.style.position = "relative";
+
+    const lbl = document.createElement("label");
+    lbl.className = "tt-card-lbl";
+    lbl.addEventListener("click",  (e) => { e.preventDefault(); e.stopPropagation(); });
+
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.checked = false;
+    chk.addEventListener("change", (e) => { e.stopPropagation(); setChecked(url, chk.checked); });
+    chk.addEventListener("click",  (e) => { e.preventDefault(); e.stopPropagation(); });
+
+    lbl.appendChild(chk);
+    anchor.appendChild(lbl);
     return chk;
   }
 
@@ -208,8 +279,9 @@
     if (el) el.textContent = `${selected} sel / ${total}`;
   }
 
-  // ── Collect new cards ─────────────────────────────────────────────
-  function collectCards() {
+  // ── Collectors ────────────────────────────────────────────────────
+
+  function collectTikTokSearch() {
     const cards = document.querySelectorAll('[data-e2e="search_top-item"]');
     let found = 0;
 
@@ -234,12 +306,94 @@
 
     if (found > 0) {
       updateCount();
-      console.log(`[TT Collector] +${found} | Total: ${state.all.size}`);
+      console.log(`[Collector] +${found} | Total: ${state.all.size}`);
     }
 
     if (cards.length === 0 && state.all.size === 0) {
-      console.warn("[TT Collector] No search cards found. Are you on tiktok.com/search/video?q=KEYWORD?");
+      console.warn("[Collector] No search cards found. Are you on tiktok.com/search/video?q=KEYWORD (Video tab)?");
     }
+  }
+
+  function collectTikTokProfile() {
+    const cards = document.querySelectorAll('[data-e2e="user-post-item"]');
+    let found = 0;
+
+    cards.forEach((card) => {
+      const anchor = card.querySelector('a[href*="/video/"]');
+      if (!anchor) return;
+      const url = anchor.href.split("?")[0];
+      if (state.all.has(url)) return;
+
+      const m        = url.match(/@([^/]+)\/video\/(\d+)/);
+      const username = m ? m[1] : PAGE.identifier;
+      const videoId  = m ? m[2] : "";
+      const thumb    = extractThumb(card);
+
+      const data = { username, videoId, thumb, checked: false, cardChk: null, panelChk: null };
+      state.all.set(url, data);
+
+      data.cardChk = injectCardCheckbox(card, url);
+      addPanelItem(url, data);
+      found++;
+    });
+
+    if (found > 0) {
+      updateCount();
+      console.log(`[Collector] +${found} | Total: ${state.all.size}`);
+    }
+
+    if (cards.length === 0 && state.all.size === 0) {
+      console.warn("[Collector] No profile cards found. Are you on tiktok.com/@username?");
+    }
+  }
+
+  function collectInstagramProfile() {
+    const anchors = document.querySelectorAll('article a[href^="/p/"], article a[href^="/reel/"]');
+    let found = 0;
+
+    anchors.forEach((anchor) => {
+      const href = anchor.getAttribute("href");
+      const url  = "https://www.instagram.com" + href.replace(/\/$/, "");
+      if (state.all.has(url)) return;
+
+      const m       = href.match(/\/(p|reel)\/([^/?]+)/);
+      const videoId = m ? m[2] : "";
+      const username = PAGE.identifier;
+
+      const img   = anchor.querySelector("img[src]");
+      const thumb = (img && img.src && !img.src.startsWith("data:")) ? img.src : null;
+
+      const data = { username, videoId, thumb, checked: false, cardChk: null, panelChk: null };
+      state.all.set(url, data);
+
+      data.cardChk = injectCardCheckboxOnAnchor(anchor, url);
+      addPanelItem(url, data);
+      found++;
+    });
+
+    if (found > 0) {
+      updateCount();
+      console.log(`[Collector] +${found} | Total: ${state.all.size}`);
+    }
+
+    if (anchors.length === 0 && state.all.size === 0) {
+      console.warn("[Collector] No Instagram posts found. Are you on instagram.com/username?");
+    }
+  }
+
+  // ── Dispatch ──────────────────────────────────────────────────────
+  function collectCards() {
+    PAGE.collector();
+  }
+
+  // ── Unique filename builder ───────────────────────────────────────
+  function buildFilename() {
+    const now  = new Date();
+    const pad  = (n) => String(n).padStart(2, "0");
+    const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const id   = PAGE.identifier.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+    return `${PAGE.platform}_${PAGE.pageType}_${id}_${date}_${time}.csv`;
   }
 
   // ── Init ──────────────────────────────────────────────────────────
@@ -247,35 +401,36 @@
   collectCards();
   state.interval = setInterval(collectCards, 800);
 
-  console.log("%c[TT Collector] Started", "color:#DA7756;font-weight:bold;font-size:14px");
+  console.log(`%c[Collector] Started — ${PAGE.label}`, "color:#DA7756;font-weight:bold;font-size:14px");
   console.log("%cScroll the page. Check videos in the panel, then click CSV.", "color:#888;font-size:12px");
 
   // ── Public API ────────────────────────────────────────────────────
   window.downloadLinks = function () {
     const selected = [...state.all.entries()].filter(([, d]) => d.checked);
     if (selected.length === 0) {
-      console.warn("[TT Collector] No videos selected. Use the checkboxes in the panel first.");
+      console.warn("[Collector] No videos selected. Use the checkboxes in the panel first.");
       return;
     }
     const rows = ["url,username,video_id"];
     for (const [url, d] of selected) {
       rows.push(`${url},${d.username},${d.videoId}`);
     }
+    const filename = buildFilename();
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a    = document.createElement("a");
     a.href     = URL.createObjectURL(blob);
-    a.download = "TikTokLinks.csv";
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    console.log(`%c[TT Collector] Saved: ${selected.length} videos → TikTokLinks.csv`, "color:#30d158;font-weight:bold");
+    console.log(`%c[Collector] Saved: ${selected.length} videos → ${filename}`, "color:#30d158;font-weight:bold");
   };
 
   window.showStatus = function () {
     const total    = state.all.size;
     const selected = [...state.all.values()].filter((d) => d.checked).length;
-    console.log(`%c[TT Collector] ${selected} selected / ${total} found`, "color:#DA7756;font-weight:bold");
+    console.log(`%c[Collector] ${selected} selected / ${total} found  (${PAGE.label})`, "color:#DA7756;font-weight:bold");
     [...state.all.entries()].filter(([, d]) => d.checked).slice(0, 3)
       .forEach(([url]) => console.log("  ", url));
   };
@@ -285,7 +440,7 @@
     state.all.clear();
     ["tt-panel", "tt-styles"].forEach((id) => document.getElementById(id)?.remove());
     document.querySelectorAll(".tt-card-lbl").forEach((el) => el.remove());
-    console.log("[TT Collector] Reset. Re-run the script to restart.");
+    console.log("[Collector] Reset. Re-run the script to restart.");
   };
 
 })();
