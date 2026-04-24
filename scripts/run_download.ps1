@@ -16,8 +16,8 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$OUTPUT_BASE = "D:\Products Reels"
-$QUEUE_DIR   = "links\queue"
+$OUTPUT_BASE = "/Users/die_u97/Movies/Reels Assets/Products Reels"
+$QUEUE_DIR   = "links/queue"
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor DarkYellow
@@ -25,12 +25,11 @@ Write-Host "       tiktok-asset-hunter launcher          " -ForegroundColor Dark
 Write-Host "  ============================================" -ForegroundColor DarkYellow
 Write-Host ""
 
-# ── 1. Verify D:\ drive ───────────────────────────────────────────────────────
-if (-not (Test-Path "D:\")) {
-    Write-Host "  [X] Drive D:\ not found. Connect your external SSD and try again." -ForegroundColor Red
-    exit 1
+# ── 1. Verify output base folder ─────────────────────────────────────────────
+if (-not (Test-Path $OUTPUT_BASE)) {
+    New-Item -ItemType Directory -Path $OUTPUT_BASE -Force | Out-Null
 }
-Write-Host "  [OK] Drive D:\ detected." -ForegroundColor Green
+Write-Host "  [OK] Output base: $OUTPUT_BASE" -ForegroundColor Green
 Write-Host ""
 
 # ── 2. Read links from queue folder ──────────────────────────────────────────
@@ -60,7 +59,7 @@ if ([string]::IsNullOrWhiteSpace($keyword)) {
 }
 
 # ── 4. Cookie method ─────────────────────────────────────────────────────────
-$defaultCookiesFile = "links\cookies.txt"
+$defaultCookiesFile = "links/cookies.txt"
 Write-Host "  Cookie method:"
 Write-Host "    [1] Browser (requires browser closed)  <- default"
 Write-Host "    [2] cookies.txt file (works with browser open)"
@@ -91,8 +90,8 @@ if ($cookieMethod -eq "2") {
 
 # ── 5. Build output path ──────────────────────────────────────────────────────
 $safeName    = $keyword -replace '[\\/:*?<>|]', '_'
-$keywordPath = "$OUTPUT_BASE\$safeName"
-$outputPath  = "$keywordPath\raw"
+$keywordPath = "$OUTPUT_BASE/$safeName"
+$outputPath  = "$keywordPath/raw"
 
 Write-Host ""
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
@@ -100,7 +99,7 @@ Write-Host "  Keyword    : $keyword"
 Write-Host "  Files      : $($linkFiles.Count) file(s) from $QUEUE_DIR"
 Write-Host "  Cookies    : $cookieDesc"
 Write-Host "  Videos     : $outputPath" -ForegroundColor Cyan
-Write-Host "  Report     : $keywordPath\report.html" -ForegroundColor Cyan
+Write-Host "  Report     : $keywordPath/report.html" -ForegroundColor Cyan
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -127,8 +126,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  [OK] Download complete." -ForegroundColor Green
 
 # ── 8. Optional: engagement report ───────────────────────────────────────────
-$logPath    = "$outputPath\download_log.csv"
-$reportPath = "$keywordPath\report.html"
+$logPath    = "$outputPath/download_log.csv"
+$reportPath = "$keywordPath/report.html"
 
 if (Test-Path $logPath) {
     Write-Host ""

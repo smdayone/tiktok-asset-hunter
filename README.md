@@ -55,18 +55,23 @@ python scripts\tiktok_batch_download.py `
   --out "D:\Products Reels\wireless_earbuds\raw"
 ```
 
-**Mac / Linux:**
+**Mac / Linux (bash launcher — recommended):**
+```bash
+bash scripts/run_download.sh
+```
+
+**Mac / Linux (manual):**
 ```bash
 python3 scripts/tiktok_batch_download.py \
   --links links/queue/tiktok_search_earbuds_20260419_1430.csv \
-  --out "/Volumes/MySSD/Products Reels/wireless_earbuds/raw"
+  --out "/path/to/Products Reels/wireless_earbuds/raw"
 ```
 
 **Multiple files + limit:**
 ```bash
 python3 scripts/tiktok_batch_download.py \
   --links links/queue/file1.csv links/queue/file2.csv \
-  --out "/Volumes/MySSD/Products Reels/earbuds/raw" \
+  --out "/path/to/Products Reels/earbuds/raw" \
   --max 30
 ```
 
@@ -93,8 +98,8 @@ python scripts\generate_report.py `
 **Mac / Linux:**
 ```bash
 python3 scripts/generate_report.py \
-  --log "/Volumes/MySSD/Products Reels/wireless_earbuds/raw/download_log.csv" \
-  --out "/Volumes/MySSD/Products Reels/wireless_earbuds/report.html" \
+  --log "/path/to/Products Reels/wireless_earbuds/raw/download_log.csv" \
+  --out "/path/to/Products Reels/wireless_earbuds/report.html" \
   --keyword "wireless earbuds"
 ```
 
@@ -134,6 +139,7 @@ tiktok-asset-hunter/
 │   ├── tiktok_url_collector.js   — paste into browser console
 │   ├── tiktok_batch_download.py  — download from CSV/TXT files
 │   ├── generate_report.py        — HTML engagement report
+│   ├── run_download.sh           — interactive bash launcher (Mac/Linux)
 │   └── run_download.ps1          — interactive PowerShell launcher (Windows)
 ├── links/
 │   ├── cookies.txt               — TikTok cookies (not committed)
