@@ -34,6 +34,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 
 # ── yt-dlp configuration ──────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ def _read_csv(path: Path) -> list[str]:
     return urls
 
 
-def load_urls(links_files: list[str], max_videos: int | None) -> list[str]:
+def load_urls(links_files: list, max_videos: Optional[int]) -> list:
     """Load and deduplicate URLs from one or more .txt or .csv files."""
     all_urls: list[str] = []
 
