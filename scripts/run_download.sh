@@ -21,7 +21,7 @@ echo ""
 # ── 2. Read links from queue folder ──────────────────────────────────────────
 mkdir -p "$QUEUE_DIR"
 
-mapfile -t LINK_FILES < <(find "$QUEUE_DIR" -maxdepth 1 \( -name "*.csv" -o -name "*.txt" \) -type f 2>/dev/null | sort)
+IFS=$'\n' read -r -d '' -a LINK_FILES < <(find "$QUEUE_DIR" -maxdepth 1 \( -name "*.csv" -o -name "*.txt" \) -type f 2>/dev/null | sort && printf '\0') || true
 
 if [[ ${#LINK_FILES[@]} -eq 0 ]]; then
     echo "  [X] No .csv or .txt files found in $QUEUE_DIR"
