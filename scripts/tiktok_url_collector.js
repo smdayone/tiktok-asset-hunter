@@ -13,7 +13,7 @@
  * 4. Scroll the page — cards appear in the side panel
  * 5. Check the videos you want to download
  * 6. Click "CSV" in the panel (or type downloadLinks() in console)
- * 7. Copy the exported CSV to links/queue/ and run run_download.ps1
+ * 7. Copy the exported CSV to links/queue/[keyword]/ and run run_download.sh (Mac) or run_download.ps1 (Windows)
  *
  * Console helpers:
  *   showStatus()     — log collection stats

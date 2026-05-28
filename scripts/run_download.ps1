@@ -17,7 +17,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $OUTPUT_BASE = "/Users/die_u97/Movies/Reels Assets/Products Reels"
-$QUEUE_DIR   = "links/queue"
+$QUEUE_BASE  = "links/queue"
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor DarkYellow
@@ -32,31 +32,37 @@ if (-not (Test-Path $OUTPUT_BASE)) {
 Write-Host "  [OK] Output base: $OUTPUT_BASE" -ForegroundColor Green
 Write-Host ""
 
-# ── 2. Read links from queue folder ──────────────────────────────────────────
+# ── 2. Keyword ────────────────────────────────────────────────────────────────
+$keyword = Read-Host "  Keyword / product name (e.g. wireless earbuds)"
+if ([string]::IsNullOrWhiteSpace($keyword)) {
+    Write-Host "  [X] Keyword cannot be empty." -ForegroundColor Red
+    exit 1
+}
+
+$safeName = $keyword -replace '[\\/:*?<>|]', '_'
+$QUEUE_DIR = "$QUEUE_BASE/$safeName"
+
+# ── 3. Read links from keyword subfolder ─────────────────────────────────────
 if (-not (Test-Path $QUEUE_DIR)) {
     New-Item -ItemType Directory -Path $QUEUE_DIR -Force | Out-Null
 }
 
-$linkFiles = @(Get-ChildItem -Path "$QUEUE_DIR\*" -Include "*.csv","*.txt" -File -ErrorAction SilentlyContinue)
+$linkFiles = @(Get-ChildItem -Path "$QUEUE_DIR/*" -Include "*.csv","*.txt" -File -ErrorAction SilentlyContinue)
 
 if ($linkFiles.Count -eq 0) {
+    Write-Host ""
     Write-Host "  [X] No .csv or .txt files found in $QUEUE_DIR" -ForegroundColor Red
-    Write-Host "      Export TikTokLinks.csv from the browser collector and copy it there." -ForegroundColor Yellow
+    Write-Host "      Export the CSV from the browser collector and copy it to:" -ForegroundColor Yellow
+    Write-Host "      $QUEUE_DIR" -ForegroundColor Yellow
     exit 1
 }
 
+Write-Host ""
 Write-Host "  [OK] Files found in $QUEUE_DIR :" -ForegroundColor Green
 foreach ($f in $linkFiles) {
     Write-Host "       - $($f.Name)"
 }
 Write-Host ""
-
-# ── 3. Keyword ────────────────────────────────────────────────────────────────
-$keyword = Read-Host "  Keyword (e.g. wireless earbuds)"
-if ([string]::IsNullOrWhiteSpace($keyword)) {
-    Write-Host "  [X] Keyword cannot be empty." -ForegroundColor Red
-    exit 1
-}
 
 # ── 4. Cookie method ─────────────────────────────────────────────────────────
 $defaultCookiesFile = "links/cookies.txt"
@@ -89,14 +95,14 @@ if ($cookieMethod -eq "2") {
 }
 
 # ── 5. Build output path ──────────────────────────────────────────────────────
-$safeName    = $keyword -replace '[\\/:*?<>|]', '_'
 $keywordPath = "$OUTPUT_BASE/$safeName"
 $outputPath  = "$keywordPath/raw"
 
 Write-Host ""
 Write-Host "  --------------------------------------------" -ForegroundColor DarkGray
 Write-Host "  Keyword    : $keyword"
-Write-Host "  Files      : $($linkFiles.Count) file(s) from $QUEUE_DIR"
+Write-Host "  Queue dir  : $QUEUE_DIR"
+Write-Host "  Files      : $($linkFiles.Count) file(s)"
 Write-Host "  Cookies    : $cookieDesc"
 Write-Host "  Videos     : $outputPath" -ForegroundColor Cyan
 Write-Host "  Report     : $keywordPath/report.html" -ForegroundColor Cyan

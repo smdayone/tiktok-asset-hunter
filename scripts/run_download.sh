@@ -5,7 +5,7 @@
 set -euo pipefail
 
 OUTPUT_BASE="/Users/die_u97/Movies/Reels Assets/Products Reels"
-QUEUE_DIR="links/queue"
+QUEUE_BASE="links/queue"
 
 echo ""
 echo "  ============================================"
@@ -18,29 +18,35 @@ mkdir -p "$OUTPUT_BASE"
 echo "  [OK] Output base: $OUTPUT_BASE"
 echo ""
 
-# ── 2. Read links from queue folder ──────────────────────────────────────────
+# ── 2. Keyword ────────────────────────────────────────────────────────────────
+read -rp "  Keyword / product name (e.g. wireless earbuds): " KEYWORD
+if [[ -z "${KEYWORD// }" ]]; then
+    echo "  [X] Keyword cannot be empty."
+    exit 1
+fi
+
+SAFE_NAME="${KEYWORD//[\\/:*?<>|]/_}"
+QUEUE_DIR="$QUEUE_BASE/$SAFE_NAME"
+
+# ── 3. Read links from keyword subfolder ─────────────────────────────────────
 mkdir -p "$QUEUE_DIR"
 
 IFS=$'\n' read -r -d '' -a LINK_FILES < <(find "$QUEUE_DIR" -maxdepth 1 \( -name "*.csv" -o -name "*.txt" \) -type f 2>/dev/null | sort && printf '\0') || true
 
 if [[ ${#LINK_FILES[@]} -eq 0 ]]; then
+    echo ""
     echo "  [X] No .csv or .txt files found in $QUEUE_DIR"
-    echo "      Export TikTokLinks.csv from the browser collector and copy it there."
+    echo "      Export the CSV from the browser collector and copy it to:"
+    echo "      $QUEUE_DIR"
     exit 1
 fi
 
+echo ""
 echo "  [OK] Files found in $QUEUE_DIR :"
 for f in "${LINK_FILES[@]}"; do
     echo "       - $(basename "$f")"
 done
 echo ""
-
-# ── 3. Keyword ────────────────────────────────────────────────────────────────
-read -rp "  Keyword (e.g. wireless earbuds): " KEYWORD
-if [[ -z "${KEYWORD// }" ]]; then
-    echo "  [X] Keyword cannot be empty."
-    exit 1
-fi
 
 # ── 4. Cookie method ──────────────────────────────────────────────────────────
 DEFAULT_COOKIES_FILE="links/cookies.txt"
@@ -66,14 +72,14 @@ else
 fi
 
 # ── 5. Build output path ──────────────────────────────────────────────────────
-SAFE_NAME="${KEYWORD//[\\/:*?<>|]/_}"
 KEYWORD_PATH="$OUTPUT_BASE/$SAFE_NAME"
 OUTPUT_PATH="$KEYWORD_PATH/raw"
 
 echo ""
 echo "  --------------------------------------------"
 echo "  Keyword    : $KEYWORD"
-echo "  Files      : ${#LINK_FILES[@]} file(s) from $QUEUE_DIR"
+echo "  Queue dir  : $QUEUE_DIR"
+echo "  Files      : ${#LINK_FILES[@]} file(s)"
 echo "  Cookies    : $COOKIE_DESC"
 echo "  Videos     : $OUTPUT_PATH"
 echo "  Report     : $KEYWORD_PATH/report.html"

@@ -30,7 +30,7 @@ tiktok_profile_username_20260419_1430.csv
 ig_profile_username_20260419_1430.csv
 ```
 
-7. Copy the `.csv` file into `links/queue/`
+7. Copy the `.csv` file into `links/queue/[keyword]/` (e.g. `links/queue/wireless_earbuds/`)
 
 Console helpers:
 ```js
@@ -143,7 +143,8 @@ tiktok-asset-hunter/
 │   └── run_download.ps1          — interactive PowerShell launcher (Windows)
 ├── links/
 │   ├── cookies.txt               — TikTok cookies (not committed)
-│   └── queue/                    — CSV/TXT files to process (not committed)
+│   └── queue/
+│       └── [keyword]/            — CSV/TXT files per product (not committed)
 └── logs/
 ```
 
